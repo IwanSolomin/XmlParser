@@ -4,6 +4,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.File;
+
 @RestController
 @RequestMapping("parser")
 public class XmlParserController {
@@ -15,7 +17,7 @@ public class XmlParserController {
     }
 
     @PostMapping("parse")
-    public Integer parseFile() {
-        return parserService.parse();
+    public Integer parseFile(File file) {
+        return parserService.parse(file);
     }
 }
