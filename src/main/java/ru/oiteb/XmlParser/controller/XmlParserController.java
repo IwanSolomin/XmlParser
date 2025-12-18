@@ -29,7 +29,6 @@ public class XmlParserController {
 
     @PostMapping(value = "/xml-converter", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Парсинг и конвертация из .xml в .xlsx",
-            tags = {"Конвертер"},
             operationId = "convertXmlToExcel"
     )
     public ResponseEntity<byte[]> convertXmlToExcel(@RequestParam("file") MultipartFile xml) {

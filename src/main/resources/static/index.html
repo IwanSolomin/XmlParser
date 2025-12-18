@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>XML → Excel Конвертер</title>
+    <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<div class="container">
+    <h1>XML → Excel Конвертер</h1>
+    <p>Загрузите XML-файл для преобразования в XLSX</p>
+
+    <div class="file-input-wrapper">
+        <input type="file" id="xmlFile" accept=".xml" />
+        <label for="xmlFile" class="file-label">Выбрать XML-файл</label>
+        <div class="file-name" id="fileName">Файл не выбран</div>
+    </div>
+
+    <button id="convertBtn" disabled>Конвертировать</button>
+
+    <div class="error" id="error"></div>
+    <div class="success" id="success">✅ Файл успешно обработан! Скачивание начнётся автоматически.</div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('xmlFile');
+    const fileName = document.getElementById('fileName');
+    const convertBtn = document.getElementById('convertBtn');
+    const errorDiv = document.getElementById('error');
+    const successDiv = document.getElementById('success');
+
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        if (!file.name.toLowerCase().endsWith('.xml')) {
+          showError('Пожалуйста, выберите файл с расширением .xml');
+          convertBtn.disabled = true;
+          return;
+        }
+        fileName.textContent = file.name;
+        convertBtn.disabled = false;
+        hideMessages();
+      } else {
+        fileName.textContent = 'Файл не выбран';
+        convertBtn.disabled = true;
+      }
+    });
+
+    convertBtn.addEventListener('click', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const response = await fetch('/v1/api/xml-converter', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          // Скачиваем файл
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'converted.xlsx';
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          a.remove();
+
+          successDiv.style.display = 'block';
+        } else {
+          const text = await response.text();
+          console.error('Ошибка сервера:', text);
+          showError('Ошибка при конвертации. Проверьте структуру XML.');
+        }
+      } catch (err) {
+        console.error(err);
+        showError('Не удалось подключиться к серверу.');
+      }
+    });
+
+    function showError(message) {
+      errorDiv.textContent = '⚠️ ' + message;
+      errorDiv.style.display = 'block';
+      successDiv.style.display = 'none';
+    }
+
+    function hideMessages() {
+      errorDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+    }
+</script>
+</body>
+</html>
