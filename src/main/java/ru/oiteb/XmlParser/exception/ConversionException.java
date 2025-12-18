@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public class ConversionException extends ParserParentException {
 
     public ConversionException(String message) {
-        super(message);
+        super("Conversation Main exception" + message);
     }
 
 }

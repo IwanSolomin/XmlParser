@@ -2,7 +2,6 @@ package ru.oiteb.XmlParser.entity;
 
 import lombok.*;
 
-
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
@@ -12,14 +11,14 @@ import lombok.*;
 @ToString
 public class ProductData {
     private Integer indexNum;
-    private String unit = "";
-    private String okpd2 = "";
-    private String nkmi = "";
-    private String manufacturer = "";
-    private String country = "";
-    private String certNumber = "";
-    private String fullName = "";
-    private String tradeMark = "";
+    private String unit;
+    private String okpd2;
+    private String nkmi;
+    private String manufacturer;
+    private String country;
+    private String certNumber;
+    private String fullName;
+    private String tradeMark;
 }
 
 

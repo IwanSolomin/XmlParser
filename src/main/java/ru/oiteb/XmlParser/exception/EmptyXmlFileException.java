@@ -7,6 +7,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public class EmptyXmlFileException extends ParserParentException {
 
     public EmptyXmlFileException(String message) {
-        super(message);
+        super("XML файл пустой" + message);
     }
 }

@@ -1,4 +1,4 @@
-package ru.oiteb.XmlParser.coonstants;
+package ru.oiteb.XmlParser.constants;
 
 import org.apache.commons.math3.optim.linear.UnboundedSolutionException;
 

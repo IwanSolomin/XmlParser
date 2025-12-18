@@ -22,6 +22,24 @@ public class ConversationServiceImpl implements ConversationService {
         this.exporter = exporter;
     }
 
+    /**
+     * Конвертирует XML-данные в формат XLSX и возвращает байтовое представление Excel-файла.
+     * <p>
+     * Метод парсит входной XML потоково с использованием {@link XMLStreamReader},
+     * извлекает данные о продуктах и записывает их в XLSX через Apache POI.
+     * </p>
+     *
+     * @param xmlContent байтовое содержимое XML-файла; не должно быть {@code null} или пустым
+     * @return массив байтов, представляющий XLSX-файл, готовый к скачиванию
+     * @throws ConversionException если:
+     *         <ul>
+     *             <li>XML повреждён или не соответствует ожидаемой структуре</li>
+     *             <li>Ошибка при генерации Excel (например, не хватает памяти)</li>
+     *             <li>Отсутствуют обязательные поля (например, {@code nationalCode})</li>
+     *         </ul>
+     * @throws IllegalArgumentException если входной массив пуст
+     * @since 1.0
+     */
     @Override
     public byte[] convert(MultipartFile xml) {
         if (xml.isEmpty()) {
@@ -33,7 +51,6 @@ public class ConversationServiceImpl implements ConversationService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-//        validateProducts(products);
         return exporter.generateExcelToBytes(products);
     }
 

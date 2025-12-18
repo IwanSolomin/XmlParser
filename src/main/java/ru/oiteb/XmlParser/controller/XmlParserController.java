@@ -1,6 +1,7 @@
 package ru.oiteb.XmlParser.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -13,8 +14,8 @@ import org.springframework.web.multipart.MultipartFile;
 import ru.oiteb.XmlParser.exception.ConversationInternalError;
 import ru.oiteb.XmlParser.service.ConversationService;
 
-import static ru.oiteb.XmlParser.coonstants.CommonConstants.EXCEL_CONTENT_HEADER;
-import static ru.oiteb.XmlParser.coonstants.CommonConstants.EXCEL_MEDIA_TYPE;
+import static ru.oiteb.XmlParser.constants.CommonConstants.EXCEL_CONTENT_HEADER;
+import static ru.oiteb.XmlParser.constants.CommonConstants.EXCEL_MEDIA_TYPE;
 
 @RestController
 @RequestMapping("v1/api")
@@ -31,7 +32,9 @@ public class XmlParserController {
     @Operation(summary = "Парсинг и конвертация из .xml в .xlsx",
             operationId = "convertXmlToExcel"
     )
-    public ResponseEntity<byte[]> convertXmlToExcel(@RequestParam("file") MultipartFile xml) {
+    public ResponseEntity<byte[]> convertXmlToExcel(
+            @Parameter(description = "XML-файл для конвертации", required = true)
+            @RequestParam("file") MultipartFile xml) {
         try {
             byte[] excelBytes = parserService.convert(xml);
             return ResponseEntity.ok()

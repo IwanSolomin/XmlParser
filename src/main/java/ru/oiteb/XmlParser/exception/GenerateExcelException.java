@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 public class GenerateExcelException extends ParserParentException {
 
     public GenerateExcelException(String message) {
-        super(message);
+        super("Exception when generating .xlsx" + message);
     }
 
 }

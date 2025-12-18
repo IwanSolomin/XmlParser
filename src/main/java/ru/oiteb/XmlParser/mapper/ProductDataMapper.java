@@ -1,4 +1,4 @@
-package ru.oiteb.XmlParser.dto.mapper;
+package ru.oiteb.XmlParser.mapper;
 
 import ru.oiteb.XmlParser.entity.ProductData;
 
