@@ -1,0 +1,11 @@
+<products>
+    <productInfo>
+        <indexNum>100</indexNum>
+        <name>Аспирин</name>
+        <trademarkInfo><trademark>Bayer</trademark></trademarkInfo>
+        <OKEIInfo><nationalCode>796</nationalCode></OKEIInfo>
+        <OKPD2Info><OKPDCode>21.20.11.110</OKPDCode></OKPD2Info>
+        <medicalProductCode>RU-123</medicalProductCode>
+        <countryFullName>Германия</countryFullName>
+    </productInfo>
+</products>
