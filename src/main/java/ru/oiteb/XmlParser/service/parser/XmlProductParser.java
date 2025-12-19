@@ -1,23 +1,24 @@
 package ru.oiteb.XmlParser.service.parser;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.oiteb.XmlParser.entity.ProductData;
-import ru.oiteb.XmlParser.exception.BadXmlFileException;
-import ru.oiteb.XmlParser.exception.XmlFactoryCreationException;
+import ru.oiteb.XmlParser.exception.InvalidXmlFileException;
+import ru.oiteb.XmlParser.exception.ParsingException;
 
 import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
-import javax.xml.stream.events.XMLEvent;
-import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import static javax.xml.stream.XMLStreamConstants.*;
+import static ru.oiteb.XmlParser.constants.ExceptionsDescriptions.*;
 import static ru.oiteb.XmlParser.constants.XmlTagConstants.*;
-import static ru.oiteb.XmlParser.mapper.ProductDataMapper.toProductData;
 
 /**
  * Парсер XML-документов, предназначенный для извлечения данных о продуктах из структурированного XML.
@@ -31,167 +32,104 @@ import static ru.oiteb.XmlParser.mapper.ProductDataMapper.toProductData;
  * внутри которых расположены теги: {@code indexNum}, {@code name}, {@code OKEIInfo},
  * {@code OKPD2Info}, {@code medicalProductCode}, {@code countryFullName}, {@code trademarkInfo} и др.
  * </p>
- *
- * <h3>Особенности парсинга:</h3>
- * <ul>
- *   <li>Поддерживает вложенные структуры (например, {@code trademark} внутри {@code trademarkInfo})</li>
- *   <li>Извлекает национальный код из {@code OKEIInfo → nationalCode}</li>
- *   <li>Игнорирует неизвестные теги (пропускает их содержимое)</li>
- *   <li>Останавливает парсинг текущего продукта при встрече закрывающего {@code </productInfo>}</li>
- * </ul>
- *
- * <h3>Обработка ошибок:</h3>
- * <ul>
- *   <li>{@link BadXmlFileException} — при ошибках ввода-вывода (например, повреждённый файл)</li>
- *   <li>{@link XmlFactoryCreationException} — при ошибках парсинга XML (некорректная структура, неожиданный конец потока)</li>
- * </ul>
- *
- * <h3>Пример использования:</h3>
- * <pre>{@code
- * byte[] xmlBytes = Files.readAllBytes(Paths.get("products.xml"));
- * List<ProductData> products = parser.parseXml(xmlBytes);
- * }</pre>
- *
- * @implNote Класс помечен как Spring-компонент ({@code @Component}) и предназначен для внедрения через DI.
- * @author solominis
- * @since 1.0
  */
 @Component
+@RequiredArgsConstructor
 public class XmlProductParser {
 
-    private final XMLInputFactory xmlFactory;
-
-    public XmlProductParser(XMLInputFactory xmlFactory) {
-        this.xmlFactory = xmlFactory;
-    }
+    private final XMLInputFactory xmlInputFactory;
 
     /**
      * Парсит XML-данные из байтового массива и возвращает список продуктов.
      * <p>
-     * Метод ищет все элементы {@code <productInfo>} в корне XML и вызывает {@link #parseProduct(XMLStreamReader)}
-     * для каждого из них.
+     * Метод ищет все элементы {@code <productInfo>} на любом уровне вложенности
+     * и извлекает из них данные о продуктах.
+     * </p>
      *
-     * @param xmlBytes содержимое XML-файла в виде массива байтов; не должно быть {@code null}
-     * @return список объектов {@link ProductData}, по одному на каждый {@code <productInfo>}
-     * @throws BadXmlFileException если возникла ошибка ввода-вывода при чтении потока
-     * @throws XmlFactoryCreationException если XML повреждён или не соответствует ожидаемой структуре
-     * @see #parseProduct(XMLStreamReader)
+     * @param xmlBytes содержимое XML-файла в виде массива байтов; не должно быть {@code null} или пустым
+     * @return список объектов {@link ProductData}, по одному на каждый найденный {@code <productInfo>}
+     * @throws ru.oiteb.XmlParser.exception.InvalidXmlFileException если:
+     *         <ul>
+     *             <li>входной массив {@code null} или пуст;</li>
+     *             <li>XML не соответствует ожидаемой структуре;</li>
+     *             <li>возникла ошибка при чтении потока.</li>
+     *         </ul>
      */
     public List<ProductData> parseXml(byte[] xmlBytes) {
-        List<ProductData> products = new ArrayList<>();
-        XMLStreamReader reader = null;
-        try (InputStream is = new ByteArrayInputStream(xmlBytes);
-             BufferedInputStream bis = new BufferedInputStream(is)) {
-            reader = xmlFactory.createXMLStreamReader(bis);
-            while (reader.hasNext()) {
-                int event = reader.next();
-                if (event == XMLEvent.START_ELEMENT && PRODUCT_INFO.equals(reader.getLocalName())) {
-                    ProductData product = parseProduct(reader);
-                    products.add(product);
-                }
-            }
-        } catch (IOException e) {
-            throw new BadXmlFileException(e.getMessage());
-        } catch (XMLStreamException e) {
-            throw new XmlFactoryCreationException(e.getMessage());
-        } finally {
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (XMLStreamException ignored) {
-                }
-            }
+        if (xmlBytes == null || xmlBytes.length == 0) {
+            throw new InvalidXmlFileException(EMPTY_XML_FILE);
         }
-        return products;
+        try (InputStream inputStream = new ByteArrayInputStream(xmlBytes)) {
+            XMLStreamReader reader = xmlInputFactory.createXMLStreamReader(inputStream);
+            List<ProductData> products = new ArrayList<>();
+
+            while (reader.hasNext()) {
+                if (reader.next() == START_ELEMENT && PRODUCT_INFO.equals(reader.getLocalName())) {
+                    products.add(parseProduct(reader));
+                }
+            }
+            return products;
+        } catch (XMLStreamException e) {
+            throw new InvalidXmlFileException(INVALID_XML_FILE);
+        } catch (IOException e) {
+            throw new ParsingException(INPUT_STREAM_EXCEPTION);
+        }
     }
 
     /**
      * Извлекает данные одного продукта из XML-потока, начиная с тега {@code <productInfo>}.
      * <p>
      * Метод парсит дочерние элементы до тех пор, пока не встретит закрывающий {@code </productInfo>}.
-     * Поддерживает вложенные структуры: {@code trademarkInfo → trademark}, {@code OKPD2Info → OKPDCode} и др.
+     * Поддерживаются вложенные структуры: {@code trademarkInfo → trademark}, {@code OKPD2Info → OKPDCode} и др.
+     * </p>
      *
      * @param reader поток, позиционированный на открывающем теге {@code <productInfo>}
      * @return заполненный объект {@link ProductData}
-     * @throws XMLStreamException если возникла ошибка при чтении XML
-     * @see #parseOKEIUnit(XMLStreamReader)
-     * @see #readElementText(XMLStreamReader)
+     * @throws InvalidXmlFileException если структура XML внутри {@code <productInfo>} нарушена
+     * @throws XMLStreamException если возникла низкоуровневая ошибка при чтении XML
      */
     private ProductData parseProduct(XMLStreamReader reader) throws XMLStreamException {
-        String unit = "";
-        String okpd2 = "";
-        String nkmi = "";
-        String manufacturer = "";
-        String country = "";
-        String certNumber = "";
-        String fullName = "";
-        String trademark = "";
-        int indexNum = 0;
-
+        ProductData product = new ProductData();
         while (reader.hasNext()) {
             int event = reader.next();
-            if (event == XMLEvent.START_ELEMENT) {
-                String name = reader.getLocalName();
-                switch (name) {
+            if (event == START_ELEMENT) {
+                String elementName = reader.getLocalName();
+                switch (elementName) {
                     case INDEX_NUM:
-                        String numText = readElementText(reader);
-                        if (!numText.isEmpty()) {
-                            indexNum = Integer.parseInt(numText);
-                        }
+                        product.setIndexNum(parseIndexNumber(reader));
                         break;
                     case NAME:
-                        if (fullName.isEmpty()) {
-                            fullName = readElementText(reader);
+                        if (isEmpty(product.getFullName())) {
+                            product.setFullName(readElementText(reader));
                         } else {
                             readElementText(reader);
                         }
                         break;
                     case TRADEMARK_INFO:
-                        while (reader.hasNext()) {
-                            int e = reader.next();
-                            if (e == XMLEvent.START_ELEMENT && TRADEMARK.equals(reader.getLocalName())) {
-                                trademark = readElementText(reader);
-                                break;
-                            }
-                            if (e == XMLEvent.END_ELEMENT && TRADEMARK_INFO.equals(reader.getLocalName())) {
-                                break;
-                            }
-                        }
+                        product.setTradeMark(parseTrademark(reader));
                         break;
                     case OKEI_INFO:
-                        unit = parseOKEIUnit(reader);
+                        product.setUnit(parseOKEIUnit(reader));
                         break;
                     case OKPD2_INFO:
-                        while (reader.hasNext()) {
-                            int e = reader.next();
-                            if (e == XMLEvent.START_ELEMENT && OKPD_CODE.equals(reader.getLocalName())) {
-                                okpd2 = readElementText(reader);
-                                break;
-                            }
-                            if (e == XMLEvent.END_ELEMENT && OKPD2_INFO.equals(reader.getLocalName())) {
-                                break;
-                            }
-                            if (e == XMLEvent.START_ELEMENT) {
-                                readElementText(reader);
-                            }
-                        }
+                        product.setOkpd2(parseOkpd2(reader));
                         break;
                     case MEDICAL_PRODUCT_CODE:
-                        nkmi = readElementText(reader);
+                        product.setNkmi(readElementText(reader));
                         break;
                     case COUNTRY_FULL_NAME:
-                        country = readElementText(reader);
+                        product.setCountry(readElementText(reader));
                         break;
                     default:
                         readElementText(reader);
                         break;
                 }
             }
-            if (event == XMLEvent.END_ELEMENT && PRODUCT_INFO.equals(reader.getLocalName())) {
+            if (event == END_ELEMENT && PRODUCT_INFO.equals(reader.getLocalName())) {
                 break;
             }
         }
-        return toProductData(indexNum, unit, okpd2, nkmi, manufacturer, country, certNumber, fullName, trademark);
+        return product;
     }
 
     /**
@@ -199,6 +137,8 @@ public class XmlProductParser {
      * <p>
      * Метод обрабатывает возможное разделение текста на несколько {@code CHARACTERS}-событий
      * (что допустимо в StAX) и объединяет их в одну строку.
+     * Также поддерживает CDATA-секции.
+     * </p>
      *
      * @param reader поток, позиционированный на открывающем теге элемента
      * @return текстовое содержимое элемента, обрезанное по краям; пустая строка, если содержимого нет
@@ -208,9 +148,9 @@ public class XmlProductParser {
         StringBuilder text = new StringBuilder();
         while (reader.hasNext()) {
             int event = reader.next();
-            if (event == XMLEvent.CHARACTERS) {
+            if (event == CHARACTERS || event == XMLStreamConstants.CDATA) {
                 text.append(reader.getText());
-            } else if (event == XMLEvent.END_ELEMENT) {
+            } else if (event == END_ELEMENT) {
                 break;
             }
         }
@@ -218,31 +158,99 @@ public class XmlProductParser {
     }
 
     /**
+     * Парсит числовое значение индекса продукта.
+     *
+     * @param reader поток, позиционированный на открывающем теге {@code <indexNum>}
+     * @return целое число; 0, если тег пуст
+     * @throws InvalidXmlFileException если содержимое тега не является допустимым целым числом
+     * @throws XMLStreamException если возникла ошибка при чтении XML
+     */
+    private int parseIndexNumber(XMLStreamReader reader) throws XMLStreamException {
+        String text = readElementText(reader);
+        if (isEmpty(text)) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(text);
+        } catch (NumberFormatException e) {
+            throw new InvalidXmlFileException(UNREADABLE_XML_FILE);
+        }
+    }
+
+    /**
+     * Извлекает наименование торговой марки из блока {@code <trademarkInfo>}.
+     *
+     * @param reader поток, позиционированный на открывающем теге {@code <trademarkInfo>}
+     * @return значение {@code <trademark>}, или пустая строка, если не найдено
+     * @throws XMLStreamException если возникла ошибка при чтении XML
+     */
+    private String parseTrademark(XMLStreamReader reader) throws XMLStreamException {
+        while (reader.hasNext()) {
+            int event = reader.next();
+            if (event == START_ELEMENT && TRADEMARK.equals(reader.getLocalName())) {
+                return readElementText(reader);
+            }
+            if (event == END_ELEMENT && TRADEMARK_INFO.equals(reader.getLocalName())) {
+                break;
+            }
+        }
+        return "";
+    }
+
+    /**
      * Извлекает национальный код единицы измерения из блока {@code <OKEIInfo>}.
      * <p>
-     * Ищет дочерний элемент {@code <nationalCode>} внутри {@code OKEIInfo} и возвращает его значение.
-     * Если элемент не найден — возвращает пустую строку.
+     * Элемент {@code <nationalCode>} является обязательным — если он отсутствует,
+     * выбрасывается исключение.
+     * </p>
      *
      * @param reader поток, позиционированный на открывающем теге {@code <OKEIInfo>}
-     * @return значение {@code <nationalCode>} или пустая строка
+     * @return значение {@code <nationalCode>}
+     * @throws InvalidXmlFileException если элемент {@code <nationalCode>} отсутствует или пуст
      * @throws XMLStreamException если возникла ошибка при чтении XML
      */
     private String parseOKEIUnit(XMLStreamReader reader) throws XMLStreamException {
         while (reader.hasNext()) {
             int event = reader.next();
-            if (event == XMLEvent.START_ELEMENT) {
+            if (event == START_ELEMENT) {
                 if (NATIONAL_CODE.equals(reader.getLocalName())) {
-                    return readElementText(reader);
+                    String code = readElementText(reader);
+                    if (isEmpty(code)) {
+                        throw new InvalidXmlFileException(EMPTY_NATIONAL_CODE);
+                    }
+                    return code;
                 } else {
                     readElementText(reader);
                 }
-            } else if (event == XMLEvent.END_ELEMENT) {
-                if (OKEI_INFO.equals(reader.getLocalName())) {
-                    break;
-                }
+            } else if (event == END_ELEMENT && OKEI_INFO.equals(reader.getLocalName())) {
+                throw new InvalidXmlFileException(INVALID_OKEI_INFO);
+            }
+        }
+        throw new InvalidXmlFileException(EMPTY_OKEI_INFO);
+    }
+
+    /**
+     * Извлекает код ОКПД2 из блока {@code <OKPD2Info>}.
+     *
+     * @param reader поток, позиционированный на открывающем теге {@code <OKPD2Info>}
+     * @return значение {@code <OKPDCode>}, или пустая строка, если не найдено
+     * @throws XMLStreamException если возникла ошибка при чтении XML
+     */
+    private String parseOkpd2(XMLStreamReader reader) throws XMLStreamException {
+        while (reader.hasNext()) {
+            int event = reader.next();
+            if (event == START_ELEMENT && OKPD_CODE.equals(reader.getLocalName())) {
+                return readElementText(reader);
+            }
+            if (event == END_ELEMENT && OKPD2_INFO.equals(reader.getLocalName())) {
+                break;
             }
         }
         return "";
+    }
+
+    private boolean isEmpty(String str) {
+        return str == null || str.isEmpty();
     }
 
 }

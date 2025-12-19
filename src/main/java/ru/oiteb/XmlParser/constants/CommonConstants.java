@@ -8,6 +8,6 @@ public final class CommonConstants {
         throw new UnboundedSolutionException();
     }
 
-    public static final String EXCEL_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-    public static final String EXCEL_CONTENT_HEADER = "attachment; filename=\"converted.xlsx\"";
+    public static final String EXCEL_XLSX = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    public static final String EXCEL_CONTENT_DISPOSITION = "attachment; filename=\"converted.xlsx\"";
 }

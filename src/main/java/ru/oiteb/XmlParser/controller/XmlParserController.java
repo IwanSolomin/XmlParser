@@ -3,6 +3,7 @@ package ru.oiteb.XmlParser.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -12,24 +13,22 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import ru.oiteb.XmlParser.exception.ConversationInternalError;
-import ru.oiteb.XmlParser.service.ConversationService;
+import ru.oiteb.XmlParser.service.ConversionService;
 
-import static ru.oiteb.XmlParser.constants.CommonConstants.EXCEL_CONTENT_HEADER;
-import static ru.oiteb.XmlParser.constants.CommonConstants.EXCEL_MEDIA_TYPE;
+import static ru.oiteb.XmlParser.constants.CommonConstants.EXCEL_CONTENT_DISPOSITION;
+import static ru.oiteb.XmlParser.constants.CommonConstants.EXCEL_XLSX;
 
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("v1/api")
 @Tag(name = "Конвертер api", description = "API ля парсинга и конвертации")
 public class XmlParserController {
 
-    private final ConversationService parserService;
-
-    public XmlParserController(ConversationService parserService) {
-        this.parserService = parserService;
-    }
+    private final ConversionService parserService;
 
     @PostMapping(value = "/xml-converter", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Парсинг и конвертация из .xml в .xlsx",
+            description = "Принимает XML-файл, парсит его и возвращает Excel-документ (.xlsx).",
             operationId = "convertXmlToExcel"
     )
     public ResponseEntity<byte[]> convertXmlToExcel(
@@ -38,8 +37,8 @@ public class XmlParserController {
         try {
             byte[] excelBytes = parserService.convert(xml);
             return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(EXCEL_MEDIA_TYPE))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, EXCEL_CONTENT_HEADER)
+                    .contentType(MediaType.parseMediaType(EXCEL_XLSX))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, EXCEL_CONTENT_DISPOSITION)
                     .body(excelBytes);
         } catch (Exception e) {
             throw new ConversationInternalError(e.getMessage());
