@@ -1,0 +1,12 @@
+spring:
+  logging:
+    level:
+      root: INFO
+      org.springframework.web: DEBUG
+      ru.oiteb.xmlparser: DEBUG
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /api-docs

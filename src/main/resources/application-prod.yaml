@@ -1,0 +1,18 @@
+spring:
+  main:
+    banner-mode: "off"
+  logging:
+    level:
+      root: WARN
+      ru.oiteb.xmlparser: WARN
+
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
+server:
+  error:
+    include-stacktrace: "never"
+    include-message: "never"
