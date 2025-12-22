@@ -3,7 +3,7 @@
 Преобразует XML-файлы в формат Excel (.xlsx) через веб-интерфейс или REST API.  
 Приложение работает **без сохранения файлов на сервере** — загрузка и скачивание происходят в памяти.
 
-![Java 21](https://img.shields.io/badge/Java-21-ED8B00?logo=java&logoColor=white)
+![Java 17](https://img.shields.io/badge/Java-17-ED8B00?logo=java&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2+-6DB33F?logo=spring&logoColor=white)
 ![Apache POI](https://img.shields.io/badge/Apache_POI-5.5+-3776AB?logo=apachepoi&logoColor=white)
 
